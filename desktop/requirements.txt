@@ -1,4 +1,6 @@
 # Required: CSV reading and Parquet writing
 pyarrow>=14
+# Windows has no time-zone database of its own
+tzdata; sys_platform == "win32"
 # Optional: drag and drop files/folders onto the window
 tkinterdnd2>=0.3

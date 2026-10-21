@@ -207,7 +207,7 @@ npm run build        # writes web/dist/csv-to-parquet.html — commit it togethe
 
 **Translations** live in `locales/<language>.json` and are shared by both versions. A string is plain text or a `{"one": …, "other": …}` pair for plurals, with `{placeholders}`. To add a language, add its JSON file and register it in `LANGUAGES` in `desktop/i18n.py` and `web/src/i18n.js`; the tests check that every language has the same keys and placeholders.
 
-**Releases**: pushing a tag like `v1.0.0` runs `.github/workflows/release.yml`, which builds the Windows executable and attaches it, together with the browser HTML, to a GitHub Release.
+**Releases**: publishing a GitHub release (for example `v1.0.0`, from the *Releases* page) runs `.github/workflows/release.yml`, which builds the Windows executable and attaches it to the release together with the browser HTML.
 
 ## License
 

@@ -24,7 +24,7 @@ echo  Building the executable ^(a few minutes^)...
 ".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --windowed ^
   --name "CSV to Parquet" --icon icon.ico ^
   --add-data "..\locales;locales" ^
-  --collect-all tkinterdnd2 ^
+  --collect-all tkinterdnd2 --collect-data tzdata ^
   --exclude-module pyarrow.tests --exclude-module pandas --exclude-module numpy.tests ^
   csv_to_parquet.py || goto :failed
 

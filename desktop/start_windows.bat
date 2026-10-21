@@ -27,7 +27,7 @@ if not exist ".venv\ready.txt" (
   if exist ".venv" rmdir /s /q ".venv"
   %PY% -m venv .venv || goto :failed
   ".venv\Scripts\python.exe" -m pip install --upgrade pip --disable-pip-version-check -q
-  ".venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q "pyarrow>=14" || goto :failed
+  ".venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q "pyarrow>=14" tzdata || goto :failed
   ".venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q tkinterdnd2 || echo  ^(Drag and drop not available; the app works anyway.^)
   echo ok> ".venv\ready.txt"
 )

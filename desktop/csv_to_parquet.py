@@ -175,6 +175,18 @@ def type_label(kind: pa.DataType) -> str:
     return str(kind)
 
 
+def without_time_zones(table: pa.Table) -> pa.Table:
+    """
+    Time-zone columns as plain UTC date-times, for display. Turning zoned values
+    into Python objects needs the time-zone database, which Windows lacks unless
+    the "tzdata" package is installed.
+    """
+    for i, f in enumerate(table.schema):
+        if pa.types.is_timestamp(f.type) and f.type.tz is not None:
+            table = table.set_column(i, f.name, table.column(i).cast(pa.timestamp(f.type.unit)))
+    return table
+
+
 def value_text(v) -> str:
     if v is None:
         return ""
@@ -1072,7 +1084,7 @@ class App:
         ids = [f"c{k}" for k in range(len(names))]
         self.data.delete(*self.data.get_children())
         self.data.configure(columns=ids)
-        rows = table.to_pylist()
+        rows = without_time_zones(table).to_pylist()
         measure = tkfont.Font(font=self.f_mono)
         for k, (cid, n) in enumerate(zip(ids, names)):
             samples = [value_text(r[n]) for r in rows[:50]]
