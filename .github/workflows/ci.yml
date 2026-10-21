@@ -36,7 +36,8 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci
         working-directory: web
-      - run: python -m pip install -r requirements-dev.txt
+      # the annotate plugin shows each failing test on the run's summary page
+      - run: python -m pip install -r requirements-dev.txt pytest-github-actions-annotate-failures
       - run: python -m py_compile desktop/csv_to_parquet.py desktop/engine.py desktop/i18n.py
       - run: python -m pytest -v
 
