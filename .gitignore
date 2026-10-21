@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Desktop executable (PyInstaller)
+desktop/build/
+desktop/dist/
+*.spec
+
+# Browser version (web/dist IS committed: it is the ready-to-use HTML)
+web/node_modules/
+
+# Conversion output and temporary files
+*.parquet
+*.partial
+conversion_report.csv
+informe_conversion.csv
+
+# Editors and systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

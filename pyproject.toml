@@ -1,0 +1,8 @@
+# Only tool settings: the app itself is not an installable package.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"

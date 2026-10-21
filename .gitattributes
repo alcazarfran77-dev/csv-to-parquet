@@ -1,0 +1,17 @@
+# Keep line endings as each platform expects them
+*.bat       text eol=crlf
+*.sh        text eol=lf
+*.command   text eol=lf
+*.py        text eol=lf
+*.js        text eol=lf
+*.mjs       text eol=lf
+*.json      text eol=lf
+*.html      text eol=lf
+*.md        text eol=lf
+*.yml       text eol=lf
+
+# Test files must stay byte for byte (some have CRLF or Windows-1252 on purpose)
+tests/fixtures/** -text -diff
+
+# Built file: hide it from diffs and language statistics
+web/dist/** linguist-generated=true -diff

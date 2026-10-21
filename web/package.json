@@ -1,0 +1,24 @@
+{
+  "name": "csv-to-parquet-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Browser version of CSV to Parquet: a single offline HTML file that converts CSV and JSON to Apache Parquet.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs --min",
+    "build:dev": "node build.mjs",
+    "test": "node --test \"test/*.test.mjs\""
+  },
+  "dependencies": {
+    "fflate": "0.8.3",
+    "hyparquet-writer": "0.16.12"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "hyparquet": "1.31.4"
+  },
+  "engines": {
+    "node": ">=20.10"
+  }
+}

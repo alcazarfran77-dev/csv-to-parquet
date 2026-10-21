@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CSV to Parquet</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='2' y='2' width='60' height='60' rx='14' fill='%230E7C66'/%3E%3Cg fill='%23fff'%3E%3Crect x='14' y='15' width='9' height='10' rx='2'/%3E%3Crect x='27.5' y='15' width='9' height='10' rx='2' opacity='.65'/%3E%3Crect x='41' y='15' width='9' height='10' rx='2'/%3E%3Crect x='14' y='27' width='9' height='10' rx='2' opacity='.65'/%3E%3Crect x='27.5' y='27' width='9' height='10' rx='2'/%3E%3Crect x='41' y='27' width='9' height='10' rx='2' opacity='.65'/%3E%3Crect x='14' y='39' width='9' height='10' rx='2'/%3E%3Crect x='27.5' y='39' width='9' height='10' rx='2' opacity='.65'/%3E%3Crect x='41' y='39' width='9' height='10' rx='2'/%3E%3C/g%3E%3C/svg%3E">
+<style>
+:root {
+  --ink: #12212B;
+  --ink-text: #A9BBC7;
+  --bg: #F3F4F6;
+  --panel: #FFFFFF;
+  --panel-2: #F8F9FA;
+  --border: #E1E4E8;
+  --border-strong: #C9CED5;
+  --text: #1B1F24;
+  --muted: #5F6874;
+  --accent: #0E7C66;
+  --accent-dark: #0A5F4E;
+  --accent-soft: #E2F1EC;
+  --error: #B42318;
+  --warning: #8A5A00;
+  --running: #0B5CAD;
+  --ok: #1B1F24;
+  --chip-num: #E3EEFB; --chip-num-t: #1D4F8A;
+  --chip-date: #EEE7F8; --chip-date-t: #5B3A8C;
+  --chip-bool: #FBF0DC; --chip-bool-t: #7A4F00;
+  --chip-text: #EEF0F2; --chip-text-t: #4A535C;
+  --shadow: 0 1px 2px rgba(18, 33, 43, .06);
+  --radius: 8px;
+  --sans: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --mono: "Cascadia Mono", Consolas, "SF Mono", Menlo, "DejaVu Sans Mono", monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #0B1419; --ink-text: #8FA3B0;
+    --bg: #101619; --panel: #161E23; --panel-2: #1A2329; --border: #26323A; --border-strong: #34424C;
+    --text: #E4E9EC; --muted: #93A1AB; --accent: #3DB894; --accent-dark: #5BCBA9; --accent-soft: #163A31;
+    --error: #F2867A; --warning: #E3B455; --running: #7DB4F0; --ok: #E4E9EC;
+    --chip-num: #18304A; --chip-num-t: #A9CBF2; --chip-date: #2C2140; --chip-date-t: #CDB6EE;
+    --chip-bool: #3A2D12; --chip-bool-t: #EAC67A; --chip-text: #243038; --chip-text-t: #B2BEC6;
+    --shadow: none;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ink: #0B1419; --ink-text: #8FA3B0;
+  --bg: #101619; --panel: #161E23; --panel-2: #1A2329; --border: #26323A; --border-strong: #34424C;
+  --text: #E4E9EC; --muted: #93A1AB; --accent: #3DB894; --accent-dark: #5BCBA9; --accent-soft: #163A31;
+  --error: #F2867A; --warning: #E3B455; --running: #7DB4F0; --ok: #E4E9EC;
+  --chip-num: #18304A; --chip-num-t: #A9CBF2; --chip-date: #2C2140; --chip-date-t: #CDB6EE;
+  --chip-bool: #3A2D12; --chip-bool-t: #EAC67A; --chip-text: #243038; --chip-text-t: #B2BEC6;
+  --shadow: none;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.45 var(--sans);
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+/* Header */
+.app-header {
+  background: var(--ink); color: #fff; padding: 12px 24px;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.app-header svg { flex: none; }
+.app-header h1 { margin: 0; font-size: 21px; line-height: 1.2; font-weight: 650; letter-spacing: -.01em; }
+.app-header p { margin: 2px 0 0; color: var(--ink-text); font-size: 13px; }
+.badge {
+  margin-left: auto; font-size: 12.5px; color: #BFE6DA; background: rgba(61, 184, 148, .12);
+  border: 1px solid rgba(61, 184, 148, .28); border-radius: 999px; padding: 5px 12px;
+}
+.languages { display: inline-flex; border: 1px solid rgba(255, 255, 255, .22); border-radius: 7px; overflow: hidden; }
+.languages button {
+  border: 0; background: none; color: var(--ink-text); font-weight: 650; font-size: 12.5px; letter-spacing: .04em;
+  padding: 5px 10px; cursor: pointer; min-width: 38px;
+}
+.languages button:hover { color: #fff; background: rgba(255, 255, 255, .08); }
+.languages button[aria-pressed="true"] { background: #0E7C66; color: #fff; }
+.languages button:disabled { cursor: default; opacity: .6; }
+
+/* Layout */
+.main {
+  display: grid; grid-template-columns: 372px minmax(0, 1fr); gap: 14px; padding: 14px 16px; min-height: 0;
+}
+.sidebar { display: flex; flex-direction: column; gap: 10px; overflow: auto; min-height: 0; padding-bottom: 2px; }
+
+.step {
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 16px 14px; box-shadow: var(--shadow);
+}
+.step h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font-size: 15px; font-weight: 650; }
+.step h2 .step-num {
+  display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px;
+  background: var(--accent-soft); color: var(--accent); font-size: 12.5px; font-weight: 700;
+}
+.button-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.help { color: var(--muted); font-size: 12.5px; margin: 8px 0 0; }
+.help.warning { color: var(--warning); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 34px; padding: 6px 14px; border-radius: 6px; cursor: pointer;
+  background: var(--panel); border: 1px solid var(--border-strong); color: var(--text); white-space: nowrap;
+}
+.btn:hover:not(:disabled) { background: var(--panel-2); border-color: var(--muted); }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn-primary {
+  background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 650; min-height: 40px; padding: 8px 22px;
+}
+:root[data-theme="dark"] .btn-primary { color: #0B1419; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn-primary { color: #0B1419; } }
+.btn-primary:hover:not(:disabled) { background: var(--accent-dark); border-color: var(--accent-dark); }
+.btn-small { min-height: 28px; padding: 3px 10px; font-size: 13px; }
+
+.zone {
+  margin-top: 10px; border: 1.5px dashed var(--border-strong); border-radius: var(--radius);
+  background: var(--panel-2); padding: 14px; text-align: center; cursor: pointer;
+  transition: background-color .15s, border-color .15s;
+}
+.zone:hover, .zone.dragover { border-color: var(--accent); background: var(--accent-soft); }
+.zone strong { display: block; font-weight: 650; overflow-wrap: anywhere; }
+.zone span { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.zone.has-files span { color: var(--accent); }
+
+.option { display: flex; align-items: flex-start; gap: 8px; padding: 3px 0; cursor: pointer; }
+.option input { margin: 3px 0 0; accent-color: var(--accent); width: 15px; height: 15px; flex: none; }
+.option.disabled { color: var(--muted); cursor: default; }
+.indent { padding-left: 23px; }
+.chosen-folder { display: flex; gap: 8px; align-items: center; margin: 2px 0 6px; }
+.chosen-folder output {
+  flex: 1; min-width: 0; padding: 5px 9px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel-2);
+  color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.chosen-folder output.chosen { color: var(--text); }
+.field { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center; margin-bottom: 8px; }
+select, input[type="text"] {
+  min-height: 32px; padding: 4px 8px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--panel); min-width: 0;
+}
+input[type="text"]:disabled, select:disabled { opacity: .55; }
+hr.divider { border: 0; border-top: 1px solid var(--border); margin: 8px 0; }
+.split-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.split-row select { min-height: 30px; padding: 3px 6px; }
+.split-row .option { margin-right: 2px; }
+.split-row input[type="number"] {
+  width: 98px; min-height: 30px; padding: 3px 8px; border: 1px solid var(--border-strong); border-radius: 6px;
+  background: var(--panel); text-align: right;
+}
+.split-row input:disabled, .split-row select:disabled { opacity: .5; }
+#split-help { margin-top: 2px; }
+.help.disabled { opacity: .55; }
+
+/* Work area */
+.workspace {
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
+  display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; overflow: hidden;
+}
+.tabs { display: flex; gap: 2px; padding: 0 10px; border-bottom: 1px solid var(--border); background: var(--panel-2); }
+.tab {
+  border: 0; background: none; padding: 11px 14px 10px; cursor: pointer; color: var(--muted); font-weight: 600;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+.tab .count { font-weight: 500; color: var(--muted); margin-left: 4px; }
+.panel { min-height: 0; display: none; }
+.panel.active { display: grid; }
+#panel-files { grid-template-rows: auto minmax(0, 1fr) auto; }
+#panel-files > .result { grid-row: 1; }
+#panel-files > .scroll { grid-row: 2; }
+#panel-files > .detail { grid-row: 3; }
+#panel-preview { grid-template-rows: auto minmax(0, 1fr); }
+#panel-log { grid-template-rows: auto minmax(0, 1fr); }
+
+.result {
+  margin: 12px 12px 0; padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border);
+  border-left: 4px solid var(--accent); background: var(--panel-2); display: flex; gap: 12px; align-items: baseline;
+}
+.result.has-errors { border-left-color: var(--error); }
+.result.cancelled { border-left-color: var(--warning); }
+.result p { margin: 0; flex: 1; }
+
+.scroll { overflow: auto; min-height: 0; }
+table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13.5px; }
+th {
+  position: sticky; top: 0; z-index: 1; background: var(--panel-2); color: var(--muted); font-weight: 600; font-size: 12.5px;
+  text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+td { padding: 6px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+#files-table tbody tr { cursor: pointer; }
+#files-table tbody tr:hover td { background: var(--panel-2); }
+#files-table tbody tr[aria-selected="true"] td { background: var(--accent-soft); }
+#files-table td.file { max-width: 0; width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.status { font-weight: 550; }
+.status.ok { color: var(--ok); }
+.status.error { color: var(--error); }
+.status.skipped, .status.cancelled { color: var(--warning); }
+.status.running { color: var(--running); }
+.status.pending { color: var(--muted); font-weight: 400; }
+tr.has-error td.file { color: var(--error); }
+.empty {
+  display: grid; place-items: center; text-align: center; color: var(--muted); padding: 40px 20px; height: 100%;
+}
+.empty strong { display: block; color: var(--text); font-size: 15px; margin-bottom: 4px; }
+.detail {
+  border-top: 1px solid var(--border); background: var(--panel-2); padding: 10px 14px; font-size: 13px; min-height: 64px;
+  max-height: 160px; overflow: auto;
+}
+.detail dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 0; }
+.detail dt { font-weight: 600; }
+.detail dd { margin: 0; overflow-wrap: anywhere; }
+.detail .error { color: var(--error); }
+.detail .warning { color: var(--warning); }
+.detail p { margin: 0; color: var(--muted); }
+
+/* Preview */
+.preview-bar { padding: 12px 14px 10px; border-bottom: 1px solid var(--border); display: grid; gap: 10px; }
+.preview-bar .line { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+.preview-bar label.inline-field { display: inline-flex; gap: 6px; align-items: center; }
+.preview-bar .preview-file-row { display: flex; gap: 8px; align-items: center; }
+.preview-bar .preview-file-row select { flex: 1; }
+.detected { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 12.5px; color: var(--muted); }
+.detected b { color: var(--text); font-weight: 600; }
+.preview-body { display: grid; grid-template-columns: minmax(0, 1fr) 300px; min-height: 0; }
+.preview-body > .scroll:first-child { border-right: 1px solid var(--border); }
+#data-table { font: 12.5px/1.4 var(--mono); }
+#data-table th { font-family: var(--sans); }
+#data-table td { max-width: 320px; overflow: hidden; text-overflow: ellipsis; padding: 4px 10px; }
+.schema h3 { margin: 0; padding: 10px 14px; font-size: 14px; position: sticky; top: 0; background: var(--panel); border-bottom: 1px solid var(--border); }
+.schema ol { list-style: none; margin: 0; padding: 4px 0; }
+.schema li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; padding: 6px 14px; border-bottom: 1px solid var(--border); }
+.schema .name { overflow-wrap: anywhere; font-weight: 550; }
+.schema .physical { grid-column: 1 / -1; font: 11.5px var(--mono); color: var(--muted); }
+.chip { font-size: 12px; padding: 1px 8px; border-radius: 999px; white-space: nowrap; align-self: start; }
+.chip.int, .chip.float { background: var(--chip-num); color: var(--chip-num-t); }
+.chip.date, .chip.timestamp { background: var(--chip-date); color: var(--chip-date-t); }
+.chip.bool { background: var(--chip-bool); color: var(--chip-bool-t); }
+.chip.string, .chip.null { background: var(--chip-text); color: var(--chip-text-t); }
+.note { margin: 0; padding: 10px 14px; color: var(--muted); font-size: 12.5px; }
+.preview-error { color: var(--error); max-width: 560px; }
+
+/* Log */
+.log-bar { display: flex; gap: 8px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.log-bar p { margin: 0 auto 0 0; color: var(--muted); font-size: 13px; }
+#log { margin: 0; padding: 10px 14px; font: 12.5px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+#log .time { color: var(--muted); }
+#log .ok { color: var(--ok); }
+#log .error { color: var(--error); }
+#log .warning { color: var(--warning); }
+
+/* Footer */
+.footer {
+  background: var(--panel); border-top: 1px solid var(--border); padding: 10px 18px;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 18px; align-items: center;
+}
+#status { margin: 0 0 6px; font-size: 13.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.progress { height: 8px; background: var(--border); border-radius: 999px; overflow: hidden; }
+.progress div { height: 100%; width: 0; background: var(--accent); border-radius: 999px; transition: width .2s linear; }
+.actions { display: flex; gap: 8px; }
+@media (prefers-reduced-motion: reduce) {
+  .progress div, .zone { transition: none; }
+}
+
+@media (max-width: 960px) {
+  body { display: block; height: auto; }
+  .main { grid-template-columns: 1fr; }
+  .sidebar { overflow: visible; }
+  .workspace { min-height: 520px; }
+  .preview-body { grid-template-columns: 1fr; }
+  .preview-body > .scroll:first-child { border-right: 0; border-bottom: 1px solid var(--border); max-height: 420px; }
+  .footer { position: sticky; bottom: 0; grid-template-columns: 1fr; }
+  .actions { justify-content: flex-end; flex-wrap: wrap; }
+  .badge { margin-left: 0; }
+}
+@media (max-width: 600px) {
+  #files-table th:nth-child(5), #files-table td:nth-child(5),
+  #files-table th:nth-child(7), #files-table td:nth-child(7) { display: none; }
+}
+@media (max-width: 480px) {
+  .app-header { padding: 12px 16px; }
+  .main { padding: 12px; }
+  .button-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<header class="app-header">
+  <svg width="40" height="40" viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="14" fill="#0E7C66"/><g fill="#fff"><rect x="14" y="15" width="9" height="10" rx="2"/><rect x="27.5" y="15" width="9" height="10" rx="2" opacity=".65"/><rect x="41" y="15" width="9" height="10" rx="2"/><rect x="14" y="27" width="9" height="10" rx="2" opacity=".65"/><rect x="27.5" y="27" width="9" height="10" rx="2"/><rect x="41" y="27" width="9" height="10" rx="2" opacity=".65"/><rect x="14" y="39" width="9" height="10" rx="2"/><rect x="27.5" y="39" width="9" height="10" rx="2" opacity=".65"/><rect x="41" y="39" width="9" height="10" rx="2"/></g></svg>
+  <div>
+    <h1 data-i18n="app_title">CSV to Parquet</h1>
+    <p data-i18n="app_subtitle_web">Converts CSV and JSON files to Apache Parquet in the browser, without installing anything.</p>
+  </div>
+  <span class="badge" data-i18n="app_badge_web">Works offline. Your files never leave this computer.</span>
+  <div class="languages" role="group" data-i18n-aria-label="lang_switch" aria-label="Language">
+    <button type="button" data-lang="en" lang="en" title="English" aria-pressed="true">EN</button>
+    <button type="button" data-lang="es" lang="es" title="Español" aria-pressed="false">ES</button>
+  </div>
+</header>
+
+<main class="main">
+  <aside class="sidebar">
+    <section class="step" aria-labelledby="h-source">
+      <h2 id="h-source"><span class="step-num">1</span><span data-i18n="step_source">Source</span></h2>
+      <div class="button-row">
+        <button class="btn" id="btn-files" type="button" data-i18n="btn_choose_files">Choose files…</button>
+        <button class="btn" id="btn-folder" type="button" data-i18n="btn_choose_folder">Choose folder…</button>
+      </div>
+      <input type="file" id="input-files" multiple accept=".csv,.tsv,.json,.jsonl,.ndjson,.gz,text/csv,text/tab-separated-values,application/json" hidden>
+      <input type="file" id="input-folder" webkitdirectory multiple hidden>
+      <div class="zone" id="drop-zone" role="button" tabindex="0" aria-describedby="zone-sub">
+        <strong id="zone-title">Drop files or folders here</strong>
+        <span id="zone-sub">.csv · .tsv · .json · .jsonl · .gz</span>
+      </div>
+      <label class="option" style="margin-top:8px"><input type="checkbox" id="opt-subfolders" checked> <span data-i18n="opt_subfolders">Include subfolders</span></label>
+    </section>
+
+    <section class="step" aria-labelledby="h-target">
+      <h2 id="h-target"><span class="step-num">2</span><span data-i18n="step_target">Destination</span></h2>
+      <label class="option" id="label-folder"><input type="radio" name="target" value="folder"> <span data-i18n="dst_folder">Save to a folder</span></label>
+      <div class="indent chosen-folder">
+        <output id="target-folder" data-i18n="dst_no_folder">No folder chosen</output>
+        <button class="btn btn-small" id="btn-target" type="button" data-i18n="btn_choose_short">Choose…</button>
+      </div>
+      <label class="option" id="label-next-to"><input type="radio" name="target" value="next-to"> <span data-i18n="dst_next_to">Next to each original file (same folder)</span></label>
+      <label class="option"><input type="radio" name="target" value="download"> <span data-i18n="dst_download">Download (one .parquet, or a .zip if there are several)</span></label>
+      <p class="help warning" id="target-help" hidden></p>
+      <hr class="divider">
+      <label class="option" id="label-structure"><input type="checkbox" id="opt-structure" checked> <span data-i18n="opt_keep_structure">Keep the source subfolders</span></label>
+      <label class="option" id="label-overwrite"><input type="checkbox" id="opt-overwrite"> <span data-i18n="opt_overwrite">Overwrite existing Parquet files</span></label>
+    </section>
+
+    <section class="step" aria-labelledby="h-output">
+      <h2 id="h-output"><span class="step-num">3</span><span data-i18n="step_output">Parquet output</span></h2>
+      <div class="field"><label for="opt-compression" data-i18n="lbl_compression">Compression</label><select id="opt-compression"></select></div>
+      <label class="option"><input type="radio" name="output" value="per-file" checked> <span data-i18n="out_per_file">One Parquet per file</span></label>
+      <label class="option"><input type="radio" name="output" value="combine"> <span data-i18n="out_combine">Combine all into a single Parquet:</span></label>
+      <div class="indent"><input type="text" id="opt-combined-name" value="combined.parquet" data-i18n-aria-label="combined_name_aria" aria-label="Name of the combined Parquet" style="width:100%"></div>
+      <label class="option indent" id="label-source-col"><input type="checkbox" id="opt-source-col" checked> <span id="source-col-text">Add a “source_file” column</span></label>
+      <hr class="divider">
+      <div class="split-row">
+        <label class="option"><input type="checkbox" id="opt-split"> <span data-i18n="opt_split">Split into parts of</span></label>
+        <input type="number" id="opt-split-value" min="1" step="any" value="1000000" data-i18n-aria-label="split_value_aria" aria-label="Size of each part">
+        <select id="opt-split-unit" data-i18n-aria-label="split_unit_aria" aria-label="Unit of each part"><option value="rows" data-i18n="split_rows">rows</option><option value="mb" data-i18n="split_mb_short">MB</option></select>
+      </div>
+      <p class="help indent" id="split-help" data-i18n="split_hint_web">Each result goes into a folder with its parts. In MB the size is approximate.</p>
+    </section>
+  </aside>
+
+  <section class="workspace" data-i18n-aria-label="workspace_aria" aria-label="Files and results">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tab-files" aria-controls="panel-files" aria-selected="true"><span data-i18n="tab_files">Files</span><span class="count" id="file-count"></span></button>
+      <button class="tab" role="tab" id="tab-preview" aria-controls="panel-preview" aria-selected="false" tabindex="-1" data-i18n="tab_preview">Preview and reading</button>
+      <button class="tab" role="tab" id="tab-log" aria-controls="panel-log" aria-selected="false" tabindex="-1" data-i18n="tab_log">Log</button>
+    </div>
+
+    <div class="panel active" id="panel-files" role="tabpanel" aria-labelledby="tab-files">
+      <div class="result" id="result" hidden><p id="result-text"></p><button class="btn btn-small" id="btn-download-again" type="button" hidden data-i18n="btn_download_again">Download again</button></div>
+      <div class="scroll">
+        <table id="files-table" hidden>
+          <thead><tr><th data-i18n="col_file">File</th><th class="num" data-i18n="col_size">Size</th><th data-i18n="col_status">Status</th><th class="num" data-i18n="col_rows">Rows</th><th class="num" data-i18n="col_cols">Cols.</th><th class="num" data-i18n="col_parquet">Parquet</th><th class="num" data-i18n="col_time">Time</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="empty" id="files-empty"><div><strong data-i18n="files_empty_title">No files yet</strong><span data-i18n="files_empty_text">Choose one or more CSV or JSON files, or a whole folder, in the panel on the left.</span></div></div>
+      </div>
+      <div class="detail" id="detail"><p data-i18n="detail_placeholder">Select a file to see its details. Double-click: preview.</p></div>
+    </div>
+
+    <div class="panel" id="panel-preview" role="tabpanel" aria-labelledby="tab-preview">
+      <div class="preview-bar">
+        <div class="preview-file-row"><label for="preview-file" data-i18n="lbl_file">File</label><select id="preview-file"></select></div>
+        <div class="line">
+          <label class="inline-field"><span data-i18n="lbl_separator">Separator</span> <select id="opt-sep"></select></label>
+          <label class="inline-field"><span data-i18n="lbl_encoding">Encoding</span> <select id="opt-enc"></select></label>
+          <label class="inline-field"><span data-i18n="lbl_decimal">Decimal</span> <select id="opt-dec"></select></label>
+        </div>
+        <div class="line">
+          <label class="option"><input type="checkbox" id="opt-header" checked> <span data-i18n="opt_header">First row = header</span></label>
+          <label class="option"><input type="checkbox" id="opt-dmy" checked> <span data-i18n="opt_dmy">dd/mm/yyyy dates</span></label>
+          <label class="option"><input type="checkbox" id="opt-all-text"> <span data-i18n="opt_all_text">Everything as text</span></label>
+          <label class="option"><input type="checkbox" id="opt-skip-bad"> <span data-i18n="opt_skip_bad">Skip malformed rows</span></label>
+        </div>
+        <div class="detected" id="detected"></div>
+      </div>
+      <div class="preview-body">
+        <div class="scroll" id="data-container">
+          <table id="data-table"><thead></thead><tbody></tbody></table>
+          <div class="empty" id="preview-empty"><div data-i18n="preview_empty">No file to preview.</div></div>
+        </div>
+        <div class="scroll schema">
+          <h3 data-i18n="schema_title_web">Parquet schema</h3>
+          <ol id="schema"></ol>
+          <p class="note" id="note-types" hidden data-i18n="note_types_sample">Types guessed from the first rows. The conversion confirms them by reading the whole file.</p>
+          <p class="note" id="note-json" hidden data-i18n="note_json_preview">In JSON, nested objects are flattened (“customer.name”) and lists are stored as JSON text. Separator, decimal and header only apply to CSV.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-log" role="tabpanel" aria-labelledby="tab-log">
+      <div class="log-bar">
+        <p data-i18n="log_description">Everything that happens during the conversion.</p>
+        <button class="btn btn-small" id="btn-clear" type="button" data-i18n="btn_clear">Clear</button>
+        <button class="btn btn-small" id="btn-report" type="button" data-i18n="btn_export_report_web">Export CSV report</button>
+      </div>
+      <div class="scroll"><pre id="log"></pre></div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div>
+    <p id="status" role="status" aria-live="polite">Choose CSV or JSON files, or a folder, to start.</p>
+    <div class="progress" role="progressbar" data-i18n-aria-label="progress_aria" aria-label="Conversion progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress"><div></div></div>
+  </div>
+  <div class="actions">
+    <button class="btn" id="btn-cancel" type="button" disabled data-i18n="btn_cancel">Cancel</button>
+    <button class="btn btn-primary" id="btn-convert" type="button" disabled data-i18n="btn_convert">Convert to Parquet</button>
+  </div>
+</footer>
+<script>
+/*__APP__*/
+</script>
+</body>
+</html>

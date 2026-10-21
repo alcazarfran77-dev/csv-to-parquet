@@ -1,0 +1,43 @@
+name: Release
+
+# Push a tag like v1.0.0 to publish a release with the Windows executable
+# and the browser version attached.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to (re)build the release for, e.g. v1.0.0
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Build the Windows executable
+        working-directory: desktop
+        run: |
+          python -m pip install -r requirements.txt pyinstaller
+          python -m PyInstaller --noconfirm --clean --windowed --name "CSV to Parquet" --icon icon.ico `
+            --add-data "..\locales;locales" --collect-all tkinterdnd2 `
+            --exclude-module pyarrow.tests --exclude-module pandas --exclude-module numpy.tests `
+            csv_to_parquet.py
+          Compress-Archive -Path "dist\CSV to Parquet" -DestinationPath "..\CSV-to-Parquet-windows.zip"
+      - name: Publish the release
+        run: |
+          gh release view $env:TAG *> $null
+          if ($LASTEXITCODE -ne 0) { gh release create $env:TAG --title "CSV to Parquet $env:TAG" --generate-notes }
+          gh release upload $env:TAG CSV-to-Parquet-windows.zip web/dist/csv-to-parquet.html --clobber
