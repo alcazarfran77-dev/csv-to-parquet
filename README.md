@@ -136,10 +136,10 @@ Run `python desktop/engine.py --help` for every option. The exit code is `1` if 
 
 ## GitHub Action
 
-To convert files inside a GitHub workflow, use the companion action **[CSV and JSON to Parquet](https://github.com/marketplace/actions/csv-and-json-to-parquet)** (repository [`csv-to-parquet-action`](../../../csv-to-parquet-action)), which runs this same engine:
+To convert files inside a GitHub workflow, use the companion action **[CSV and JSON to Parquet](https://github.com/marketplace/actions/csv-and-json-to-parquet)** (repository [`csv-to-parquet-action`](https://github.com/alcazarfran77-dev/csv-to-parquet-action)), which runs this same engine:
 
 ```yaml
-- uses: OWNER/csv-to-parquet-action@v1
+- uses: alcazarfran77-dev/csv-to-parquet-action@v1
   with:
     path: data/**/*.csv
     output: parquet
